@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Moon Phase Guide</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #090b14;
+      --surface: #111827;
+      --surface2: #1a2236;
+      --border: #1f2f4a;
+      --text: #e8eaf0;
+      --muted: #8892a4;
+      --accent: #c9a84c;
+      --accent-soft: rgba(201,168,76,0.12);
+      --moon-light: #f5f0e0;
+      --moon-shadow: #0d1525;
+    }
+
+    body {
+      font-family: 'Georgia', serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 2rem 1rem 4rem;
+    }
+
+    /* Stars */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        radial-gradient(1px 1px at 10% 15%, rgba(255,255,255,0.6) 0%, transparent 100%),
+        radial-gradient(1px 1px at 25% 40%, rgba(255,255,255,0.4) 0%, transparent 100%),
+        radial-gradient(1px 1px at 40% 8%,  rgba(255,255,255,0.7) 0%, transparent 100%),
+        radial-gradient(1px 1px at 55% 22%, rgba(255,255,255,0.5) 0%, transparent 100%),
+        radial-gradient(1px 1px at 70% 5%,  rgba(255,255,255,0.6) 0%, transparent 100%),
+        radial-gradient(1px 1px at 85% 18%, rgba(255,255,255,0.4) 0%, transparent 100%),
+        radial-gradient(1px 1px at 92% 35%, rgba(255,255,255,0.5) 0%, transparent 100%),
+        radial-gradient(1px 1px at 5%  60%, rgba(255,255,255,0.3) 0%, transparent 100%),
+        radial-gradient(1px 1px at 18% 75%, rgba(255,255,255,0.5) 0%, transparent 100%),
+        radial-gradient(1px 1px at 33% 88%, rgba(255,255,255,0.4) 0%, transparent 100%),
+        radial-gradient(1px 1px at 60% 70%, rgba(255,255,255,0.6) 0%, transparent 100%),
+        radial-gradient(1px 1px at 78% 82%, rgba(255,255,255,0.3) 0%, transparent 100%),
+        radial-gradient(1px 1px at 95% 65%, rgba(255,255,255,0.5) 0%, transparent 100%),
+        radial-gradient(1.5px 1.5px at 47% 52%, rgba(255,255,255,0.8) 0%, transparent 100%),
+        radial-gradient(1.5px 1.5px at 82% 48%, rgba(255,255,255,0.7) 0%, transparent 100%),
+        radial-gradient(2px 2px at 15% 30%, rgba(255,255,255,0.9) 0%, transparent 100%),
+        radial-gradient(2px 2px at 65% 90%, rgba(255,255,255,0.8) 0%, transparent 100%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 2.5rem;
+      position: relative;
+      z-index: 1;
+    }
+
+    header h1 {
+      font-size: clamp(1.6rem, 4vw, 2.4rem);
+      font-weight: normal;
+      letter-spacing: 0.15em;
+      color: var(--accent);
+      text-transform: uppercase;
+    }
+
+    header p.date {
+      margin-top: 0.5rem;
+      color: var(--muted);
+      font-style: italic;
+      font-size: 0.95rem;
+      letter-spacing: 0.05em;
+    }
+
+    /* Moon canvas */
+    .moon-wrap {
+      position: relative;
+      z-index: 1;
+      margin-bottom: 2rem;
+    }
+
+    canvas#moon {
+      display: block;
+      filter: drop-shadow(0 0 30px rgba(201,168,76,0.25)) drop-shadow(0 0 60px rgba(201,168,76,0.1));
+    }
+
+    /* Phase label */
+    .phase-label {
+      text-align: center;
+      margin-bottom: 2.5rem;
+      position: relative;
+      z-index: 1;
+    }
+
+    .phase-label h2 {
+      font-size: clamp(1.3rem, 3.5vw, 2rem);
+      font-weight: normal;
+      letter-spacing: 0.08em;
+      color: var(--moon-light);
+    }
+
+    .phase-label .illumination {
+      margin-top: 0.4rem;
+      color: var(--muted);
+      font-size: 0.9rem;
+      letter-spacing: 0.04em;
+    }
+
+    /* Correspondence card */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 2rem 2.2rem;
+      max-width: 660px;
+      width: 100%;
+      position: relative;
+      z-index: 1;
+      margin-bottom: 1.5rem;
+    }
+
+    .card h3 {
+      font-size: 0.7rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 1.4rem;
+    }
+
+    .correspondences {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 1.2rem;
+    }
+
+    .corr-item {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1rem 1.1rem;
+    }
+
+    .corr-item .label {
+      font-size: 0.65rem;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 0.4rem;
+    }
+
+    .corr-item .value {
+      font-size: 0.92rem;
+      color: var(--text);
+      line-height: 1.5;
+    }
+
+    /* Intentions */
+    .intentions {
+      margin-top: 1.6rem;
+      padding-top: 1.6rem;
+      border-top: 1px solid var(--border);
+    }
+
+    .intentions h4 {
+      font-size: 0.65rem;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 0.8rem;
+    }
+
+    .intentions p {
+      font-size: 0.93rem;
+      line-height: 1.75;
+      color: var(--muted);
+      font-style: italic;
+    }
+
+    /* All phases reference */
+    .phases-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+      gap: 0.75rem;
+      max-width: 660px;
+      width: 100%;
+      position: relative;
+      z-index: 1;
+    }
+
+    .phase-tile {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 0.85rem 1rem;
+      cursor: default;
+      transition: border-color 0.2s;
+    }
+
+    .phase-tile.active {
+      border-color: var(--accent);
+      background: var(--accent-soft);
+    }
+
+    .phase-tile .tile-name {
+      font-size: 0.78rem;
+      letter-spacing: 0.05em;
+      color: var(--text);
+      margin-bottom: 0.3rem;
+    }
+
+    .phase-tile .tile-keyword {
+      font-size: 0.7rem;
+      color: var(--muted);
+      font-style: italic;
+    }
+
+    .section-label {
+      font-size: 0.65rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--muted);
+      max-width: 660px;
+      width: 100%;
+      margin-bottom: 0.7rem;
+      position: relative;
+      z-index: 1;
+    }
+
+    footer {
+      margin-top: 3rem;
+      color: var(--muted);
+      font-size: 0.75rem;
+      letter-spacing: 0.06em;
+      position: relative;
+      z-index: 1;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>Moon Phase Guide</h1>
+  <p class="date" id="dateDisplay"></p>
+</header>
+
+<div class="moon-wrap">
+  <canvas id="moon" width="200" height="200"></canvas>
+</div>
+
+<div class="phase-label">
+  <h2 id="phaseName"></h2>
+  <p class="illumination" id="illuminationText"></p>
+</div>
+
+<div class="card">
+  <h3>Today's Correspondences</h3>
+  <div class="correspondences" id="corrGrid"></div>
+  <div class="intentions">
+    <h4>Working With This Energy</h4>
+    <p id="intentionText"></p>
+  </div>
+</div>
+
+<p class="section-label">All Eight Phases</p>
+<div class="phases-grid" id="phasesGrid"></div>
+
+<footer>Updates daily at midnight &middot; Based on lunar cycle calculation</footer>
+
+<script>
+  // ─── Moon phase calculation ───────────────────────────────────────────────
+  function julianDay(date) {
+    const y = date.getUTCFullYear();
+    const m = date.getUTCMonth() + 1;
+    const d = date.getUTCDate();
+    let A = Math.floor(y / 100);
+    let B = 2 - A + Math.floor(A / 4);
+    return Math.floor(365.25 * (y + 4716)) + Math.floor(30.6001 * (m + 1)) + d + B - 1524.5;
+  }
+
+  function getMoonData(date) {
+    const jd = julianDay(date);
+    // Days since known new moon (Jan 6, 2000 = JD 2451550.1)
+    const knownNew = 2451550.1;
+    const synodicPeriod = 29.53058867;
+    const daysSince = jd - knownNew;
+    let age = ((daysSince % synodicPeriod) + synodicPeriod) % synodicPeriod;
+    const illumination = (1 - Math.cos((2 * Math.PI * age) / synodicPeriod)) / 2;
+    return { age, illumination };
+  }
+
+  function getPhaseIndex(age) {
+    const p = age / 29.53058867;
+    if (p < 0.0625) return 0;      // New Moon
+    if (p < 0.1875) return 1;      // Waxing Crescent
+    if (p < 0.3125) return 2;      // First Quarter
+    if (p < 0.4375) return 3;      // Waxing Gibbous
+    if (p < 0.5625) return 4;      // Full Moon
+    if (p < 0.6875) return 5;      // Waning Gibbous
+    if (p < 0.8125) return 6;      // Last Quarter
+    if (p < 0.9375) return 7;      // Waning Crescent
+    return 0;
+  }
+
+  // ─── Phase data ───────────────────────────────────────────────────────────
+  const phases = [
+    {
+      name: 'New Moon',
+      keyword: 'Beginnings',
+      element: 'Earth',
+      energy: 'Receptive, inward, still',
+      crystals: 'Black tourmaline, obsidian, labradorite',
+      herbs: 'Mugwort, myrrh, sage',
+      colors: 'Black, deep indigo',
+      deities: 'Hecate, Kali, the Crone',
+      intention: 'The new moon is a threshold — a breath held between endings and what comes next. Set intentions in silence. Plant seeds invisibly. This is the moment for inner vision, for writing down what you wish to call forward in the coming cycle. Rest is not absence of work; it is the soil in which new things take root.'
+    },
+    {
+      name: 'Waxing Crescent',
+      keyword: 'Intention',
+      element: 'Earth / Air',
+      energy: 'Hopeful, initiating, curious',
+      crystals: 'Citrine, green aventurine, clear quartz',
+      herbs: 'Basil, cinnamon, lemon balm',
+      colors: 'Pale yellow, soft green',
+      deities: 'Artemis, Brigid, Saraswati',
+      intention: 'The sliver of light returns and with it, momentum. This phase favors taking the first small steps toward what you named at the new moon. Speak your intentions aloud. Begin the project, send the message, plant the physical seed. What you initiate now has the growing light behind it.'
+    },
+    {
+      name: 'First Quarter',
+      keyword: 'Action',
+      element: 'Fire',
+      energy: 'Decisive, active, challenged',
+      crystals: 'Carnelian, red jasper, tiger\'s eye',
+      herbs: 'Ginger, nettle, rosemary',
+      colors: 'Orange, red, gold',
+      deities: 'Ares, Durga, the Warrior',
+      intention: 'Half the cycle complete, and the moon stands at a right angle to the sun — tension made visible. Obstacles surface now to test your resolve. This is not a sign to stop but a call to decide and act. Push through resistance. Make the hard choice. The square is a doorway that opens only when you walk toward it.'
+    },
+    {
+      name: 'Waxing Gibbous',
+      keyword: 'Refinement',
+      element: 'Fire / Water',
+      energy: 'Analytical, persistent, adjusting',
+      crystals: 'Amethyst, blue lace agate, fluorite',
+      herbs: 'Chamomile, lavender, thyme',
+      colors: 'Violet, amber, teal',
+      deities: 'Athena, Thoth, Mercury',
+      intention: 'The moon swells toward fullness — you can feel the potential building. This is the phase of refinement and patience. Review your work, adjust the course, gather the last details. Avoid the urge to rush or abandon. You are closer than you think. Trust the process you set in motion and tend it carefully.'
+    },
+    {
+      name: 'Full Moon',
+      keyword: 'Manifestation',
+      element: 'Water',
+      energy: 'Amplified, heightened, illuminating',
+      crystals: 'Moonstone, selenite, rainbow moonstone',
+      herbs: 'Jasmine, rose, sandalwood',
+      colors: 'Silver, white, pearl',
+      deities: 'Selene, Diana, Isis, Tsukuyomi',
+      intention: 'The moon is fully lit — and so is everything you have been building. Completion, celebration, and revelation live here. What began at the new moon now stands in full light. Charge crystals and water in the moonlight. Release what has served its purpose. Gather with others. This is the peak of the cycle\'s power — honor it.'
+    },
+    {
+      name: 'Waning Gibbous',
+      keyword: 'Gratitude',
+      element: 'Water / Air',
+      energy: 'Reflective, generous, sharing',
+      crystals: 'Smoky quartz, blue kyanite, aquamarine',
+      herbs: 'Yarrow, elderflower, mint',
+      colors: 'Deep blue, sea green, silver',
+      deities: 'Demeter, Coatlicue, the Teacher',
+      intention: 'The light begins its slow retreat and invites you to integrate what the fullness revealed. Share what you have learned. Express gratitude for what manifested and for what did not — both are teachings. This is an excellent phase for giving back, teaching others, and distributing the abundance of the completed cycle.'
+    },
+    {
+      name: 'Last Quarter',
+      keyword: 'Release',
+      element: 'Air',
+      energy: 'Surrendering, clearing, forgiving',
+      crystals: 'Black obsidian, apache tear, black moonstone',
+      herbs: 'Patchouli, cypress, clove',
+      colors: 'Deep purple, charcoal, rust',
+      deities: 'Ereshkigal, Hades, the Psychopomp',
+      intention: 'The square returns — now as an invitation to let go. What no longer serves the next cycle? Release grudges, habits, relationships, and beliefs that have grown too heavy to carry forward. Write it down and burn it, bury it, dissolve it. The willingness to clear space is itself an act of power and an act of trust.'
+    },
+    {
+      name: 'Waning Crescent',
+      keyword: 'Rest',
+      element: 'Air / Earth',
+      energy: 'Surrendered, dreaming, completing',
+      crystals: 'Lepidolite, howlite, moonstone (gray)',
+      herbs: 'Valerian, passionflower, blue lotus',
+      colors: 'Pale gray, soft lavender, white',
+      deities: 'Morpheus, Nyx, the Dreamer',
+      intention: 'The barest sliver of light remains and the moon calls you inward one last time. This is the phase of deep rest, vivid dreams, and gentle completion. Do not force new beginnings — they are still forming in the dark. Sleep more if you can. Journal your dreams. Trust the quiet. The new moon is near.'
+    }
+  ];
+
+  // ─── Draw moon on canvas ──────────────────────────────────────────────────
+  function drawMoon(age, illumination) {
+    const canvas = document.getElementById('moon');
+    const ctx = canvas.getContext('2d');
+    const cx = canvas.width / 2;
+    const cy = canvas.height / 2;
+    const r = 88;
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    const waxing = age <= 14.765;
+
+    // Draw the lit part
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.fillStyle = '#f5f0e0';
+    ctx.fill();
+    ctx.restore();
+
+    // Draw shadow to simulate phase
+    ctx.save();
+    ctx.beginPath();
+
+    const phase = age / 29.53058867;
+
+    if (phase < 0.5) {
+      // Waxing: shadow covers left portion
+      const bulge = r * (1 - 2 * (illumination));
+      ctx.arc(cx, cy, r, Math.PI / 2, -Math.PI / 2, false);
+      ctx.bezierCurveTo(cx + bulge, cy - r * 0.5, cx + bulge, cy + r * 0.5, cx, cy + r);
+    } else {
+      // Waning: shadow covers right portion
+      const bulge = r * (1 - 2 * (illumination));
+      ctx.arc(cx, cy, r, Math.PI / 2, -Math.PI / 2, true);
+      ctx.bezierCurveTo(cx - bulge, cy - r * 0.5, cx - bulge, cy + r * 0.5, cx, cy + r);
+    }
+
+    ctx.fillStyle = '#0d1525';
+    ctx.fill();
+    ctx.restore();
+
+    // Subtle craters
+    const craters = [
+      {x: cx - 20, y: cy - 28, r: 7},
+      {x: cx + 30, y: cy + 15, r: 5},
+      {x: cx - 5,  y: cy + 35, r: 9},
+      {x: cx + 15, y: cy - 40, r: 4},
+      {x: cx - 38, y: cy + 10, r: 6},
+    ];
+
+    craters.forEach(c => {
+      ctx.save();
+      // Only draw craters in lit region
+      ctx.beginPath();
+      ctx.arc(cx, cy, r, 0, Math.PI * 2);
+      ctx.clip();
+
+      // Check if crater center is in shadow (approximate)
+      let inShadow = false;
+      if (phase < 0.5) {
+        // Shadow is on left
+        const shadowBulge = r * (1 - 2 * illumination);
+        inShadow = c.x < cx + shadowBulge * 0.5;
+      } else {
+        const shadowBulge = r * (1 - 2 * illumination);
+        inShadow = c.x > cx - shadowBulge * 0.5;
+      }
+
+      if (!inShadow) {
+        ctx.beginPath();
+        ctx.arc(c.x, c.y, c.r, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(180,170,150,0.18)';
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(c.x, c.y, c.r, 0, Math.PI * 2);
+        ctx.strokeStyle = 'rgba(140,130,110,0.22)';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+      }
+      ctx.restore();
+    });
+
+    // Outer glow ring
+    const grd = ctx.createRadialGradient(cx, cy, r - 2, cx, cy, r + 22);
+    grd.addColorStop(0, 'rgba(245,240,224,0.12)');
+    grd.addColorStop(1, 'rgba(245,240,224,0)');
+    ctx.beginPath();
+    ctx.arc(cx, cy, r + 22, 0, Math.PI * 2);
+    ctx.fillStyle = grd;
+    ctx.fill();
+  }
+
+  // ─── Render ───────────────────────────────────────────────────────────────
+  function render() {
+    const now = new Date();
+    const { age, illumination } = getMoonData(now);
+    const phaseIdx = getPhaseIndex(age);
+    const phase = phases[phaseIdx];
+
+    // Date
+    document.getElementById('dateDisplay').textContent = now.toLocaleDateString('en-US', {
+      weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+    });
+
+    // Moon
+    drawMoon(age, illumination);
+
+    // Labels
+    document.getElementById('phaseName').textContent = phase.name;
+    document.getElementById('illuminationText').textContent =
+      `${Math.round(illumination * 100)}% illuminated · Day ${Math.round(age)} of 29.5`;
+
+    // Correspondences
+    const corrFields = [
+      { label: 'Element',  value: phase.element  },
+      { label: 'Energy',   value: phase.energy   },
+      { label: 'Crystals', value: phase.crystals },
+      { label: 'Herbs',    value: phase.herbs    },
+      { label: 'Colors',   value: phase.colors   },
+      { label: 'Deities',  value: phase.deities  },
+    ];
+
+    const grid = document.getElementById('corrGrid');
+    grid.innerHTML = corrFields.map(f => `
+      <div class="corr-item">
+        <div class="label">${f.label}</div>
+        <div class="value">${f.value}</div>
+      </div>
+    `).join('');
+
+    document.getElementById('intentionText').textContent = phase.intention;
+
+    // All phases grid
+    const phasesGrid = document.getElementById('phasesGrid');
+    phasesGrid.innerHTML = phases.map((p, i) => `
+      <div class="phase-tile ${i === phaseIdx ? 'active' : ''}">
+        <div class="tile-name">${p.name}</div>
+        <div class="tile-keyword">${p.keyword}</div>
+      </div>
+    `).join('');
+  }
+
+  render();
+
+  // Refresh at midnight
+  const now = new Date();
+  const msToMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1) - now;
+  setTimeout(() => { render(); setInterval(render, 86400000); }, msToMidnight);
+</script>
+</body>
+</html>
